@@ -1,0 +1,12 @@
+[programs.localnet]
+tile_test = "4FZCjDLXZbRGvqHD3W6FyQoYn5YkgrsYxj7KG3xW5AW7"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "localnet"
+wallet = "/Users/johnkoehn/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
