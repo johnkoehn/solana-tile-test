@@ -212,5 +212,8 @@ describe('tile-test', () => {
           rent: anchor.web3.SYSVAR_RENT_PUBKEY
         }
     });
+
+    const accountInfo = await fetchTokenAccount(program, resourceTokenAccount);
+    console.log('test', Uint32Array.from(accountInfo.amount).toString())
   })
 });
