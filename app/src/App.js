@@ -47,17 +47,17 @@ const createMintInfo = async () => {
 
 const calculateNextXY = (x, y) => {
     if (x === 5) {
-      return {
-        x: 0,
-        y: y + 1
-      };
+        return {
+            x: 0,
+            y: y + 1
+        };
     }
 
     return {
-      x: x+1,
-      y
+        x: x + 1,
+        y
     };
-  }
+};
 
 function App() {
     const [value, setValue] = useState(null);
@@ -192,34 +192,97 @@ function App() {
         );
     }
 
-    const generateResource = () => {
+    const generateResource = async (x, y) => {
+        // find the x, y coordinate
+        // generate the resource
+        const provider = getProvider();
+        const program = new Program(TileTest, programId, provider);
 
+        const gameAccountPublicKey = new web3.PublicKey(gamePublicKey);
+        const gameAccount = await program.account.gameAccount.fetch(gameAccountPublicKey);
+
+        let foundTile = false;
+        let currentTile;
+        let currentTileKey;
+        do {
+            currentTileKey = currentTile ?
+                new web3.PublicKey(currentTile.nextTile) :
+                new web3.PublicKey(gameAccount.firstTileKey);
+
+            currentTile = await program.account.tileAccount.fetch(currentTileKey);
+
+            foundTile = currentTile.x === x && currentTile.y === y;
+        } while (!foundTile);
+
+        const resourceMintSeed = `r2${x}r2${y}`;
+        const [resourceMint, resourceMintBump] = await web3.PublicKey.findProgramAddress([Buffer.from(resourceMintSeed)], programId);
+
+        const tileTokenAccount = await spl.Token.getAssociatedTokenAddress(
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+            spl.TOKEN_PROGRAM_ID,
+            currentTile.mintKey,
+            program.provider.wallet.publicKey
+        );
+
+        const resourceTokenAccount = await spl.Token.getAssociatedTokenAddress(
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+            spl.TOKEN_PROGRAM_ID,
+            currentTile.resourceKey,
+            program.provider.wallet.publicKey
+        );
+
+        try {
+            await program.rpc.generateResource(
+                resourceMintBump,
+                resourceMintSeed,
+                {
+                    accounts: {
+                        tile: currentTileKey,
+                        tileTokenAccount,
+                        resourceTokenAccount,
+                        resourceMint,
+                        authority: program.provider.wallet.publicKey,
+                        systemProgram: web3.SystemProgram.programId,
+                        tokenProgram: spl.TOKEN_PROGRAM_ID,
+                        associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+                        rent: web3.SYSVAR_RENT_PUBKEY
+                    }
+                }
+            );
+
+            const tokenAccountInfo = await program.provider.connection.getAccountInfo(resourceTokenAccount);
+            // console.log(JSON.stringify(tokenAccountInfo, null, 4))
+            const tokenAccountData = spl.AccountLayout.decode(tokenAccountInfo.data);
+            console.log(tokenAccountData);
+        } catch (err) {
+            console.log(err);
+        }
     };
 
     return (
         <Container>
             <Row>
-                <Col onClick={() => console.log('hello')}>
+                <Col onClick={() => generateResource(0, 0)}>
                     <p>X 0</p>
                     <p>Y 0</p>
                 </Col>
-                <Col>
+                <Col onClick={() => generateResource(1, 0)}>
                     <p>X 1</p>
                     <p>Y 0</p>
                 </Col>
-                <Col>
+                <Col onClick={() => generateResource(2, 0)}>
                     <p>X 2</p>
                     <p>Y 0</p>
                 </Col>
-                <Col>
+                <Col onClick={() => generateResource(3, 0)}>
                     <p>X 3</p>
                     <p>Y 0</p>
                 </Col>
-                <Col>
+                <Col onClick={() => generateResource(4, 0)}>
                     <p>X 4</p>
                     <p>Y 0</p>
                 </Col>
-                <Col>
+                <Col onClick={() => generateResource(5, 0)}>
                     <p>X 5</p>
                     <p>Y 0</p>
                 </Col>
