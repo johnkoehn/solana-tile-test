@@ -1,5 +1,10 @@
 use anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::{Mint, Token, TokenAccount},
+};
+use spl_token;
 
 declare_id!("4FZCjDLXZbRGvqHD3W6FyQoYn5YkgrsYxj7KG3xW5AW7");
 
@@ -13,28 +18,54 @@ pub enum TileTypes {
 
 #[program]
 pub mod tile_test {
-    use std::{env::current_exe, thread::current};
-
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> ProgramResult {
-        let initial_account = &mut ctx.accounts.initial_account;
-        let tile_account = &mut ctx.accounts.tile;
-        let authoriy = &mut ctx.accounts.authority;
+    pub fn initialize(ctx: Context<Initialize>, tile_mint_bump: u8, tile_mint_seed: String, _resource_mint_bump: u8, _resource_mint_seed: String) -> ProgramResult {
+        let game_account = &mut ctx.accounts.game_account;
+        let new_tile = &mut ctx.accounts.new_tile;
 
-        initial_account.first_tile_key = tile_account.key();
-        initial_account.tiles = 1;
+        game_account.first_tile_key = new_tile.key();
+        game_account.tiles = 1;
 
-        tile_account.owner = authoriy.key();
-        tile_account.next_tile = None;
-        tile_account.x = 0;
-        tile_account.y = 0;
-        tile_account.tile_type = TileTypes::Wheat;
+        new_tile.mint_key = ctx.accounts.tile_mint.key();
+        new_tile.resource_key = ctx.accounts.resource_mint.key();
+        new_tile.next_tile = None;
+        new_tile.x = 0;
+        new_tile.y = 0;
+        new_tile.tile_type = TileTypes::Wheat;
+
+        // mint token to repersent the tile
+        anchor_spl::token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                anchor_spl::token::MintTo {
+                    mint: ctx.accounts.tile_mint.to_account_info(),
+                    to: ctx.accounts.destination.to_account_info(),
+                    authority: ctx.accounts.tile_mint.to_account_info(),
+                },
+                &[&[&tile_mint_seed.as_bytes(), &[tile_mint_bump]]],
+            ),
+            1,
+        )?;
+
+        // turn off the mint forever to make it a "NFT"
+        anchor_spl::token::set_authority(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                anchor_spl::token::SetAuthority {
+                    current_authority: ctx.accounts.tile_mint.to_account_info(),
+                    account_or_mint: ctx.accounts.tile_mint.to_account_info()
+                },
+                &[&[&tile_mint_seed.as_bytes(), &[tile_mint_bump]]]
+            ),
+            spl_token::instruction::AuthorityType::MintTokens,
+            None
+        )?;
 
         Ok(())
     }
 
-    pub fn mint_tile(ctx: Context<MintTile>, tile_type: TileTypes) -> ProgramResult {
+    pub fn mint_tile(ctx: Context<MintTile>, tile_type: TileTypes, tile_mint_bump: u8, tile_mint_seed: String, _resource_mint_bump: u8, _resource_mint_seed: String) -> ProgramResult {
         // this must be the most recent tile (i.e. next tile none)
         let current_tile = &mut ctx.accounts.current_tile;
 
@@ -42,11 +73,11 @@ pub mod tile_test {
             return Err(ErrorCode::WrongTile.into());
         }
 
+        let game_account = &mut ctx.accounts.game_account;
         let new_tile = &mut ctx.accounts.new_tile;
-        let authority = &mut ctx.accounts.authority;
 
+        // set up new tile
         new_tile.next_tile = None;
-        new_tile.owner = authority.key();
         if current_tile.x == 5 {
             new_tile.x = 0;
             new_tile.y = current_tile.y + 1;
@@ -55,45 +86,219 @@ pub mod tile_test {
             new_tile.y = current_tile.y;
         }
         new_tile.tile_type = tile_type;
+        new_tile.mint_key = ctx.accounts.tile_mint.key();
+        new_tile.resource_key = ctx.accounts.resource_mint.key();
 
+        // current tile no longer current
         current_tile.next_tile = Some(new_tile.key());
+
+        // increment number of tiles minted
+        game_account.tiles += 1;
+
+        // mint token to repersent the tile
+        anchor_spl::token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                anchor_spl::token::MintTo {
+                    mint: ctx.accounts.tile_mint.to_account_info(),
+                    to: ctx.accounts.destination.to_account_info(),
+                    authority: ctx.accounts.tile_mint.to_account_info(),
+                },
+                &[&[&tile_mint_seed.as_bytes(), &[tile_mint_bump]]],
+            ),
+            1,
+        )?;
+
+        // turn off the mint forever to make it a "NFT"
+        anchor_spl::token::set_authority(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                anchor_spl::token::SetAuthority {
+                    current_authority: ctx.accounts.tile_mint.to_account_info(),
+                    account_or_mint: ctx.accounts.tile_mint.to_account_info()
+                },
+                &[&[&tile_mint_seed.as_bytes(), &[tile_mint_bump]]]
+            ),
+            spl_token::instruction::AuthorityType::MintTokens,
+            None
+        )?;
+        Ok(())
+    }
+
+    // the simple goal here
+    // can we verify the user has a token repersenting they own the tile
+    pub fn generate_resource(ctx: Context<GenerateResource>, resource_mint_bump: u8, resource_mint_seed: String) -> ProgramResult {
+        let tile = &ctx.accounts.tile;
+        let token_account = &ctx.accounts.tile_token_account;
+        let resource_mint = &mut ctx.accounts.resource_mint;
+
+        // correct mint?
+        if tile.resource_key != resource_mint.key() {
+            return Err(ErrorCode::WrongMint.into());
+        }
+
+        // correct token account?
+        if tile.mint_key != token_account.mint.key() {
+            return Err(ErrorCode::WrongTokenAccount.into())
+        }
+
+        // does token account have amount 1 ?
+        if token_account.amount != 1 {
+            return Err(ErrorCode::NoNFT.into())
+        }
+
+        msg!("Mint Token");
+        // generate a resource token for the user
+        anchor_spl::token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                anchor_spl::token::MintTo {
+                    mint: resource_mint.to_account_info(),
+                    to: ctx.accounts.resource_token_account.to_account_info(),
+                    authority: resource_mint.to_account_info(),
+                },
+                &[&[&resource_mint_seed.as_bytes(), &[resource_mint_bump]]],
+            ),
+            1,
+        )?;
         Ok(())
     }
 }
 
+// ideally what we should be doing here is adding a token that can be traded
+// the token can be transfered around
+// if the user has the token, they can pass it in and change various parameters of the tile
+// resource mint seed is [`${tile.x}${tile.y}`]
 #[derive(Accounts)]
+#[instruction(tile_mint_bump: u8, tile_mint_seed: String, resource_mint_bump: u8, resource_mint_seed: String)]
 pub struct Initialize<'info> {
     #[account(init, payer = authority, space = 8 + 32 + 8)]
-    pub initial_account: Account<'info, InitializeAccount>,
+    pub game_account: Account<'info, GameAccount>,
 
     // failed to deseralize account is when we don't have enough space
-    #[account(init, payer = authority, space = 8 + 32 + 2 + 2 + 1 + 32 + 1)]
-    pub tile: Account<'info, TileAccount>,
+    #[account(init, payer = authority, space = 8 + 32 + 32 + 2 + 2 + 1 + 32 + 1)]
+    pub new_tile: Account<'info, TileAccount>,
+
+    #[account(
+        init,
+        payer = authority,
+        seeds = [tile_mint_seed.as_bytes()],
+        bump = tile_mint_bump,
+        mint::decimals = 0,
+        mint::authority = tile_mint
+    )]
+    pub tile_mint: Account<'info, Mint>,
+
+    #[account(
+        init,
+        payer = authority,
+        seeds = [resource_mint_seed.as_bytes()],
+        bump = resource_mint_bump,
+        mint::decimals = 4,
+        mint::authority = resource_mint
+    )]
+    pub resource_mint: Account<'info, Mint>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        associated_token::mint = tile_mint,
+        associated_token::authority = authority
+    )]
+    pub destination: Account<'info, TokenAccount>,
+
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    pub rent: Sysvar<'info, Rent>
 }
 
+// resource mint seed is [`${tile.x}`, `${tile.y}`]
 #[derive(Accounts)]
+#[instruction(tile_type: TileTypes, tile_mint_bump: u8, tile_mint_seed: String, resource_mint_bump: u8, resource_mint_seed: String)]
 pub struct MintTile<'info> {
-    #[account(init, payer = authority, space = 8 + 32 + 2 + 2 + 1 + 32 + 1)]
+    #[account(init, payer = authority, space = 8 + 32 + 32 + 2 + 2 + 1 + 32 + 1)]
     pub new_tile: Account<'info, TileAccount>,
 
+    #[account(
+        init,
+        payer = authority,
+        seeds = [tile_mint_seed.as_bytes()],
+        bump = tile_mint_bump,
+        mint::decimals = 0,
+        mint::authority = tile_mint
+    )]
+    pub tile_mint: Account<'info, Mint>,
+
+    #[account(
+        init,
+        payer = authority,
+        seeds = [resource_mint_seed.as_bytes()],
+        bump = resource_mint_bump,
+        mint::decimals = 4,
+        mint::authority = resource_mint
+    )]
+    pub resource_mint: Account<'info, Mint>,
+
     #[account(mut)]
-    pub initial_account: Account<'info, InitializeAccount>,
+    pub game_account: Account<'info, GameAccount>,
 
     #[account(mut)]
     pub current_tile: Account<'info, TileAccount>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        associated_token::mint = tile_mint,
+        associated_token::authority = authority
+    )]
+    pub destination: Account<'info, TokenAccount>,
+
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    pub rent: Sysvar<'info, Rent>
 }
+
+#[derive(Accounts)]
+#[instruction(resource_mint_bump: u8, resource_mint_seed: String)]
+pub struct GenerateResource<'info> {
+    pub tile: Account<'info, TileAccount>,
+    pub tile_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub resource_mint: Account<'info, Mint>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        associated_token::mint = resource_mint,
+        associated_token::authority = authority
+    )]
+    pub resource_token_account: Account<'info, TokenAccount>,
+
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>
+}
+
+// Account not owned by the program
+// CpiAccount
 
 #[account]
 pub struct TileAccount {
-    pub owner: Pubkey,
+    pub mint_key: Pubkey,
+    pub resource_key: Pubkey,
     pub x: u16,
     pub y: u16,
     pub tile_type: TileTypes,
@@ -102,7 +307,7 @@ pub struct TileAccount {
 }
 
 #[account]
-pub struct InitializeAccount {
+pub struct GameAccount {
     pub first_tile_key: Pubkey,
     pub tiles: u64
 }
@@ -114,5 +319,14 @@ pub struct InitializeAccount {
 #[error]
 pub enum ErrorCode {
     #[msg("Not the most recent tile")]
-    WrongTile
+    WrongTile,
+
+    #[msg("Not the correct resource mint for the tile")]
+    WrongMint,
+
+    #[msg("Not the correct token account for the tile")]
+    WrongTokenAccount,
+
+    #[msg("The account does not the NFT for the tile")]
+    NoNFT
 }
