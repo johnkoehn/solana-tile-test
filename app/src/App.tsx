@@ -13,6 +13,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Button } from 'react-bootstrap';
 import * as spl from '@solana/spl-token';
 import chunk from 'chunk';
+import { HexGrid, Layout, Hexagon, GridGenerator } from 'react-hexgrid';
 import TileTestIdl from './tile_test_idl.json';
 import getProvider from './util/getProvider';
 import Loading from './util/components/Loading';
@@ -55,7 +56,10 @@ function App() {
         while (nextTileKey) {
             console.log(tilesList.length);
             currentTile = await program.account.tileAccount.fetch(nextTileKey);
-            tilesList.push(currentTile);
+            tilesList.push({
+                ...currentTile,
+                tileKey: nextTileKey
+            });
             nextTileKey = currentTile.nextTile;
         }
 
@@ -76,88 +80,17 @@ function App() {
         );
     }
 
-    // const generateResource = async (x, y) => {
-    //     // find the x, y coordinate
-    //     // generate the resource
-    //     const provider = getProvider(wallet, 'http://127.0.0.1:8899');
-    //     const program = new Program(TileTestIdl, programId, provider);
-
-    //     const gameAccountPublicKey = new web3.PublicKey(gamePublicKey);
-    //     const gameAccount = await program.account.gameAccount.fetch(gameAccountPublicKey);
-
-    //     let foundTile = false;
-    //     let currentTile;
-    //     let currentTileKey;
-    //     do {
-    //         currentTileKey = currentTile ?
-    //             new web3.PublicKey(currentTile.nextTile) :
-    //             new web3.PublicKey(gameAccount.firstTileKey);
-
-    //         currentTile = await program.account.tileAccount.fetch(currentTileKey);
-
-    //         foundTile = currentTile.x === x && currentTile.y === y;
-    //     } while (!foundTile);
-
-    //     const resourceMintSeed = `r2${x}r2${y}`;
-    //     const [resourceMint, resourceMintBump] = await web3.PublicKey.findProgramAddress([Buffer.from(resourceMintSeed)], programId);
-
-    //     const tileTokenAccount = await spl.Token.getAssociatedTokenAddress(
-    //         spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    //         spl.TOKEN_PROGRAM_ID,
-    //         currentTile.mintKey,
-    //         program.provider.wallet.publicKey
-    //     );
-
-    //     const resourceTokenAccount = await spl.Token.getAssociatedTokenAddress(
-    //         spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    //         spl.TOKEN_PROGRAM_ID,
-    //         currentTile.resourceKey,
-    //         program.provider.wallet.publicKey
-    //     );
-
-    //     try {
-    //         await program.rpc.generateResource(
-    //             resourceMintBump,
-    //             resourceMintSeed,
-    //             {
-    //                 accounts: {
-    //                     tile: currentTileKey,
-    //                     tileTokenAccount,
-    //                     resourceTokenAccount,
-    //                     resourceMint,
-    //                     authority: program.provider.wallet.publicKey,
-    //                     systemProgram: web3.SystemProgram.programId,
-    //                     tokenProgram: spl.TOKEN_PROGRAM_ID,
-    //                     associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    //                     rent: web3.SYSVAR_RENT_PUBKEY
-    //                 }
-    //             }
-    //         );
-
-    //         const tokenAccountInfo = await program.provider.connection.getAccountInfo(resourceTokenAccount);
-    //         // console.log(JSON.stringify(tokenAccountInfo, null, 4))
-    //         const tokenAccountData = spl.AccountLayout.decode(tokenAccountInfo.data);
-    //         console.log(tokenAccountData);
-    //     } catch (err) {
-    //         console.log(err);
-    //     }
-    // };
-
     const buildTiles = () => {
-        return chunk(tiles, 5).map((x) => {
-            const tilesChunk = x.map((tile) => <Tile tile={tile} />);
-
-            return (
-                <Row>
-                    {tilesChunk}
-                </Row>
-            );
-        });
+        return tiles.map((tile) => <Tile tile={tile} />);
     };
 
     return (
         <Container>
-            {buildTiles()}
+            <HexGrid width={2000} height={2000}>
+                <Layout size={{ x: 1, y: 1 }} origin={{ x: 0, y: 0 }}>
+                    {buildTiles()}
+                </Layout>
+            </HexGrid>
         </Container>
     );
 }
