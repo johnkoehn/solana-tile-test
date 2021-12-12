@@ -31,6 +31,11 @@
           "isSigner": true
         },
         {
+          "name": "receiver",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "destination",
           "isMut": true,
           "isSigner": false
@@ -57,6 +62,16 @@
         }
       ],
       "args": [
+        {
+          "name": "tileType",
+          "type": {
+            "defined": "TileTypes"
+          }
+        },
+        {
+          "name": "tilesFromCenter",
+          "type": "u8"
+        },
         {
           "name": "tileMintBump",
           "type": "u8"
@@ -107,6 +122,11 @@
           "name": "authority",
           "isMut": true,
           "isSigner": true
+        },
+        {
+          "name": "receiver",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "destination",
@@ -235,12 +255,12 @@
             "type": "publicKey"
           },
           {
-            "name": "x",
-            "type": "u16"
+            "name": "q",
+            "type": "i16"
           },
           {
-            "name": "y",
-            "type": "u16"
+            "name": "r",
+            "type": "i16"
           },
           {
             "name": "tileType",
@@ -267,8 +287,20 @@
             "type": "publicKey"
           },
           {
-            "name": "tiles",
+            "name": "currentTileKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "maxTiles",
             "type": "u64"
+          },
+          {
+            "name": "currentNumberOfTiles",
+            "type": "u64"
+          },
+          {
+            "name": "maxTilesFromCenter",
+            "type": "u8"
           }
         ]
       }
@@ -316,6 +348,11 @@
       "code": 303,
       "name": "NoNFT",
       "msg": "The account does not the NFT for the tile"
+    },
+    {
+      "code": 304,
+      "name": "MaxTiles",
+      "msg": "The game has minted the max number of tiles"
     }
   ],
   "metadata": {
