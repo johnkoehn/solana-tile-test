@@ -1,5 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 import * as spl from '@solana/spl-token';
+const { assert } = require('chai');
 import { Program } from '@project-serum/anchor';
 import { nanoid } from 'nanoid';
 import { TileTest, IDL } from '../target/types/tile_test';
@@ -169,51 +170,69 @@ describe('tile-test', () => {
   //   console.log(JSON.stringify(tileAccountData2, null, 4));
   // });
 
-  it('should generate a resource when the user is the owner', async () => {
-    const gameAccountPublicKey = new anchor.web3.PublicKey(gameAccountPublicKeyString);
-    const gameAccount = await program.account.gameAccount.fetch(gameAccountPublicKey);
+  // it('should generate a resource when the user is the owner', async () => {
+  //   const gameAccountPublicKey = new anchor.web3.PublicKey(gameAccountPublicKeyString);
+  //   const gameAccount = await program.account.gameAccount.fetch(gameAccountPublicKey);
 
-    const tileAccountPublicKey = new anchor.web3.PublicKey(gameAccount.firstTileKey);
-    const firstTileAccount = await program.account.tileAccount.fetch(tileAccountPublicKey);
+  //   const tileAccountPublicKey = new anchor.web3.PublicKey(gameAccount.firstTileKey);
+  //   const firstTileAccount = await program.account.tileAccount.fetch(tileAccountPublicKey);
 
-    const secondTilePublicKey = new anchor.web3.PublicKey(firstTileAccount.nextTile);
-    const secondTileAccount = await program.account.tileAccount.fetch(secondTilePublicKey);
+  //   const secondTilePublicKey = new anchor.web3.PublicKey(firstTileAccount.nextTile);
+  //   const secondTileAccount = await program.account.tileAccount.fetch(secondTilePublicKey);
 
-    const resourceMintSeed = `r${secondTileAccount.x}r${secondTileAccount.y}`
-    const [resourceMint, resourceMintBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(resourceMintSeed)], programId);
+  //   const resourceMintSeed = `r${secondTileAccount.x}r${secondTileAccount.y}`
+  //   const [resourceMint, resourceMintBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(resourceMintSeed)], programId);
 
-    const tileTokenAccount = await spl.Token.getAssociatedTokenAddress(
-      spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-      spl.TOKEN_PROGRAM_ID,
-      secondTileAccount.mintKey,
-      program.provider.wallet.publicKey
-    );
+  //   const tileTokenAccount = await spl.Token.getAssociatedTokenAddress(
+  //     spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+  //     spl.TOKEN_PROGRAM_ID,
+  //     secondTileAccount.mintKey,
+  //     program.provider.wallet.publicKey
+  //   );
 
-    const resourceTokenAccount = await spl.Token.getAssociatedTokenAddress(
-      spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-      spl.TOKEN_PROGRAM_ID,
-      secondTileAccount.resourceKey,
-      program.provider.wallet.publicKey
-    );
+  //   const resourceTokenAccount = await spl.Token.getAssociatedTokenAddress(
+  //     spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+  //     spl.TOKEN_PROGRAM_ID,
+  //     secondTileAccount.resourceKey,
+  //     program.provider.wallet.publicKey
+  //   );
 
-    await program.rpc.generateResource(
-      resourceMintBump,
-      resourceMintSeed,
-      {
-        accounts: {
-          tile: secondTilePublicKey,
-          tileTokenAccount,
-          resourceTokenAccount,
-          resourceMint,
-          authority: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY
-        }
-    });
+  //   await program.rpc.generateResource(
+  //     resourceMintBump,
+  //     resourceMintSeed,
+  //     {
+  //       accounts: {
+  //         tile: secondTilePublicKey,
+  //         tileTokenAccount,
+  //         resourceTokenAccount,
+  //         resourceMint,
+  //         authority: program.provider.wallet.publicKey,
+  //         systemProgram: anchor.web3.SystemProgram.programId,
+  //         tokenProgram: spl.TOKEN_PROGRAM_ID,
+  //         associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+  //         rent: anchor.web3.SYSVAR_RENT_PUBKEY
+  //       }
+  //   });
 
-    const accountInfo = await fetchTokenAccount(program, resourceTokenAccount);
-    console.log('test', Uint32Array.from(accountInfo.amount).toString())
-  })
+  //   const accountInfo = await fetchTokenAccount(program, resourceTokenAccount);
+  //   console.log('test', Uint32Array.from(accountInfo.amount).toString())
+  // })
+
+  // it('should not allow a random user to mint a token', async () => {
+  //   let hadError = false;
+  //   try {
+  //     const resourceMintSeed = `r1r0`;
+  //     const [resourceMint, resourceMintBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(resourceMintSeed)], programId);
+
+  //     const wallet = anchor.web3.Keypair.fromSecretKey(Uint8Array.from([141,131,11,232,206,152,203,90,232,114,221,197,26,55,77,169,203,84,110,88,178,126,241,48,95,46,48,65,90,16,172,193,188,45,233,51,62,185,31,50,227,166,4,188,132,233,99,103,202,139,43,233,199,143,223,28,165,31,191,98,199,245,8,150]));
+  //     const mint = new spl.Token(program.provider.connection, resourceMint, anchor.web3.SystemProgram.programId, wallet);
+
+  //     console.log((await mint.getMintInfo()).supply);
+  //   } catch (err) {
+  //     console.log(err.message);
+  //     hadError = true;
+  //   }
+
+  //   assert.ok(hadError)
+  // });
 });
