@@ -18,7 +18,7 @@ const createMintInfo = async (anchor, programId) =>  {
 }
 
 const createMintInfoResource = async (anchor, programId, q, r) => {
-  const seed = `r4${q}r4${r}`;
+  const seed = `r${q}r${r}`;
   const [mint, mintBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(seed)], programId);
 
   return {
@@ -74,7 +74,7 @@ describe('Build Game', () => {
   const program = anchor.workspace.TileTest as Program<TileTest>;
   const programId = program.programId;
 
-  const maxTilesFromCenter = 18; // 1027 tiles
+  const maxTilesFromCenter = 9; // 271 tiles
 
   const uiPublicKey = new anchor.web3.PublicKey('bgEUZT6TdrRB1oRE9QtKEKjZXTksq2afeHqPRZeoTEq');
 
@@ -130,7 +130,7 @@ describe('Build Game', () => {
   // });
 
   // update this when creating new game account
-  const gameAccountPublicKeyString = 'DHgrjtGSsLukd8J3fEdEwm4NjYRq28EUUzS8sKzC2z8u';
+  const gameAccountPublicKeyString = 'NmxSeFArvRoTLoxm2FnogMbGhWcjsouVCSys4eAdqHA';
 
   it('should allow us to mint all da tiles', async () => {
     const gameAccountPublicKey = new anchor.web3.PublicKey(gameAccountPublicKeyString);
@@ -189,5 +189,5 @@ describe('Build Game', () => {
 
       currentNumber += 1;
     } while(currentNumber < maxNumberOfTiles);
-  })
+  });
 });

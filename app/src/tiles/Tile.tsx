@@ -15,17 +15,30 @@ import getProvider from '../util/getProvider';
 
 const programId = new PublicKey(TileTestIdl.metadata.address);
 
+const COLOR_MAPPING = {
+    gold: 'gold',
+    wheat: 'yellow',
+    wood: 'brown',
+    iron: '#434341'
+};
+
 const Tile = (props: any) => {
     const wallet = useWallet();
     const tile = props.tile;
 
     console.log(tile);
 
+    const getHexagonColor = () => {
+        return {
+            fill: COLOR_MAPPING[Object.keys(tile.tileType)[0]]
+        };
+    };
+
     const generateResource = async () => {
         const provider = getProvider(wallet, 'http://127.0.0.1:8899');
         const program = new Program(TileTestIdl, programId, provider);
 
-        const resourceMintSeed = `r4${tile.q}r4${tile.r}`;
+        const resourceMintSeed = `r${tile.q}r${tile.r}`;
         const [resourceMint, resourceMintBump] = await web3.PublicKey.findProgramAddress([Buffer.from(resourceMintSeed)], programId);
 
         const tileTokenAccount = await spl.Token.getAssociatedTokenAddress(
@@ -71,7 +84,7 @@ const Tile = (props: any) => {
     };
 
     return (
-        <Hexagon onClick={generateResource} key={tile.mintKey.toString()} q={tile.q} r={tile.r} s={-tile.q - tile.r} />
+        <Hexagon onClick={generateResource} key={tile.mintKey.toString()} cellStyle={getHexagonColor()} q={tile.q} r={tile.r} s={-tile.q - tile.r} />
     );
 };
 

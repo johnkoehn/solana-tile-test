@@ -27,7 +27,7 @@ const wallets = [
 
 const programId = new PublicKey(TileTestIdl.metadata.address);
 
-const gamePublicKey = 'DHgrjtGSsLukd8J3fEdEwm4NjYRq28EUUzS8sKzC2z8u';
+const gamePublicKey = 'NmxSeFArvRoTLoxm2FnogMbGhWcjsouVCSys4eAdqHA';
 
 function App() {
     const [tiles, setTiles] = useState<any>(undefined);
