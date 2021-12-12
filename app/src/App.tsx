@@ -18,7 +18,7 @@ import TileTestIdl from './tile_test_idl.json';
 import getProvider from './util/getProvider';
 import Loading from './util/components/Loading';
 import { TileTest, IDL } from './tile_test';
-import Tile from './tiles/Tile';
+import Tiles from './tiles/Tiles';
 
 const wallets = [
     // view list of available wallets at https://github.com/solana-labs/wallet-adapter#wallets
@@ -58,7 +58,8 @@ function App() {
             currentTile = await program.account.tileAccount.fetch(nextTileKey);
             tilesList.push({
                 ...currentTile,
-                tileKey: nextTileKey
+                tileKey: nextTileKey,
+                tileType: Object.keys(currentTile.tileType)[0]
             });
             nextTileKey = currentTile.nextTile;
         }
@@ -80,15 +81,11 @@ function App() {
         );
     }
 
-    const buildTiles = () => {
-        return tiles.map((tile) => <Tile tile={tile} />);
-    };
-
     return (
         <Container>
             <HexGrid width={2000} height={2000}>
-                <Layout size={{ x: 1, y: 1 }} origin={{ x: 0, y: 0 }}>
-                    {buildTiles()}
+                <Layout size={{ x: 1, y: 1 }} spacing={1.1} origin={{ x: 0, y: 0 }}>
+                    <Tiles tiles={tiles} />
                 </Layout>
             </HexGrid>
         </Container>

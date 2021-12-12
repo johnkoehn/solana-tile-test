@@ -35,7 +35,8 @@ module.exports = {
         'linebreak-style': 0,
         'react/no-array-index-key': 0,
         '@typescript-eslint/comma-dangle': ['error', 'never'],
-        'react/destructuring-assignment': 0
+        'react/destructuring-assignment': 0,
+        'react/jsx-one-expression-per-line': 0,
     },
     ignorePatterns: ['.eslintrc.js'],
     parserOptions: {
