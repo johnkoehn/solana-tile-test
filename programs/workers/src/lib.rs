@@ -88,9 +88,9 @@ pub mod workers {
         Ok(())
     }
 
-    // pub fn complete_task(ctx: Context<CompleteTask>) -> ProgramResult {
-    //     Ok(())
-    // }
+    pub fn complete_task(ctx: Context<CompleteTask>, resource_mint_bump: u8, resource_mint_seed: String) -> ProgramResult {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -154,6 +154,33 @@ pub struct AssignTask<'info> {
 
     pub tile_account: Account<'info, tile_test::TileAccount>,
     pub signer: Signer<'info>
+}
+
+#[derive(Accounts)]
+#[instruction(resource_mint_bump: u8, resource_mint_seed: String)]
+pub struct CompleteTask<'info> {
+    pub worker_program_account: Account<'info, WorkerProgramAccount>,
+
+    #[account(mut)]
+    pub worker_account: Account<'info, WorkerAccount>,
+    pub worker_token_account: Account<'info, TokenAccount>,
+    pub tile_account: Account<'info, tile_test::TileAccount>,
+
+    pub resource_mint: Account<'info, Mint>,
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = resource_mint,
+        associated_token::authority = signer
+    )]
+    pub resource_token_account: Account<'info, TokenAccount>,
+
+    pub signer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>
 }
 
 #[account]
