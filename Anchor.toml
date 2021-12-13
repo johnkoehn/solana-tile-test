@@ -1,5 +1,6 @@
 [programs.localnet]
 tile_test = "4FZCjDLXZbRGvqHD3W6FyQoYn5YkgrsYxj7KG3xW5AW7"
+workers = "DCCJ7jBybHT9Z9ZpDhXYKKS5S5LpQEBJeyiqwadCChdz"
 
 [registry]
 url = "https://anchor.projectserum.com"

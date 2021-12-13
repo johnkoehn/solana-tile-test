@@ -1,0 +1,30 @@
+{
+    "skills": {
+        "transport": {
+            "level": 0,
+            "exp": 0
+        },
+        "mining": {
+            "level": 0,
+            "exp": 0
+        },
+        "forging": {
+            "level": 0,
+            "exp": 0
+        },
+        "farming": {
+            "level": 0,
+            "exp": 0
+        },
+        "crafting": {
+            "level": 0,
+            "exp": 0
+        }
+    },
+    "task": {
+        "completeTime": "",
+        "reward": 5.5,
+        "fee": "0.1",
+        "tile": "pubkey??"
+    }
+}

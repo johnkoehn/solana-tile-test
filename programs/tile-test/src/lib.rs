@@ -172,6 +172,9 @@ pub mod tile_test {
         )?;
         Ok(())
     }
+
+    // for now, just throw an error when the tile account does not exist
+    // pub fn add_worker()
 }
 
 #[derive(Accounts)]

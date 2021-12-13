@@ -132,7 +132,7 @@ describe('Build Game', () => {
   // update this when creating new game account
   const gameAccountPublicKeyString = 'NmxSeFArvRoTLoxm2FnogMbGhWcjsouVCSys4eAdqHA';
 
-  it('should allow us to mint all da tiles', async () => {
+  it.skip('should allow us to mint all da tiles', async () => {
     const gameAccountPublicKey = new anchor.web3.PublicKey(gameAccountPublicKeyString);
     const gameAccount = await program.account.gameAccount.fetch(gameAccountPublicKey);
 
