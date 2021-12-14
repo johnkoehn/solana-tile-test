@@ -158,4 +158,56 @@ describe('Worker', () => {
         signers: [testKey]
     });
   });
+
+  it('should not allow a user to complete a work task', async () => {
+    const gameAccount = await tileProgram.account.gameAccount.fetch(gameAccountPublicKey);
+    const tileAccount = await tileProgram.account.tileAccount.fetch(gameAccount.firstTileKey);
+
+    // get bump for resource
+    const seed = `r${tileAccount.q}r${tileAccount.r}`;
+    const [mint, mintBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(seed)], tileProgram.programId);
+
+    const resourceTokenAccount = await spl.Token.getAssociatedTokenAddress(
+        spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        spl.TOKEN_PROGRAM_ID,
+        mint,
+        tileProgram.provider.wallet.publicKey
+    );
+
+    let hadError = false;
+    try {
+        await tileProgram.rpc.workerCompleteTask(mintBump, seed, new anchor.BN(100), {
+            accounts: {
+                resourceMint: mint,
+                resourceTokenAccount: resourceTokenAccount,
+                signer: tileProgram.provider.wallet.publicKey,
+                receiver: tileProgram.provider.wallet.publicKey,
+                systemProgram: anchor.web3.SystemProgram.programId,
+                tokenProgram: spl.TOKEN_PROGRAM_ID,
+                associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+                rent: anchor.web3.SYSVAR_RENT_PUBKEY
+            },
+            signers: []
+        });
+    } catch (err) {
+        hadError = true;
+        console.log(err);
+    }
+
+    assert.ok(hadError)
+    // pub resource_mint: Account<'info, Mint>,
+
+    // pub resource_token_account: Account<'info, TokenAccount>,
+
+    // #[account(mut)]
+    // pub worker_token_account: Account<'info, TokenAccount>,
+
+    // pub signer: Signer<'info>,
+
+    // pub authority: Signer<'info>,
+    // pub system_program: Program<'info, System>,
+    // pub associated_token_program: Program<'info, AssociatedToken>,
+    // pub token_program: Program<'info, Token>,
+    // pub rent: Sysvar<'info, Rent>
+  });
 });

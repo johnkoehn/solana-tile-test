@@ -173,8 +173,8 @@ pub mod tile_test {
         Ok(())
     }
 
-    pub fn worker_complete_task(ctx: Context<WorkerCompleteTask>, resource_mint_bump: u8, resource_mint_seed: String) -> ProgramResult {
-        if ctx.accounts.signer.key().to_string() == "3pymbNnN2VYi79iRVddNcUefTL2T2AhqNjSJaZm9PTmr" {
+    pub fn worker_complete_task(ctx: Context<WorkerCompleteTask>, resource_mint_bump: u8, resource_mint_seed: String, amount: u64) -> ProgramResult {
+        if ctx.accounts.signer.key().to_string() != "3pymbNnN2VYi79iRVddNcUefTL2T2AhqNjSJaZm9PTmr" {
             return Err(ErrorCode::WorkerProgramOnly.into())
         }
 
@@ -313,14 +313,17 @@ pub struct WorkerCompleteTask<'info> {
     #[account(mut)]
     pub resource_mint: Account<'info, Mint>,
 
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = resource_mint,
+        associated_token::authority = receiver
+    )]
     pub resource_token_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
-    pub worker_token_account: Account<'info, TokenAccount>,
-
     pub signer: Signer<'info>,
+    pub receiver: AccountInfo<'info>,
 
-    pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
