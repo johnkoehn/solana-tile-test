@@ -174,10 +174,11 @@ pub mod tile_test {
     }
 
     pub fn worker_complete_task(ctx: Context<WorkerCompleteTask>, resource_mint_bump: u8, resource_mint_seed: String, amount: u64) -> ProgramResult {
-        if ctx.accounts.signer.key().to_string() != "3pymbNnN2VYi79iRVddNcUefTL2T2AhqNjSJaZm9PTmr" {
+        if ctx.accounts.signer.key().to_string() != "AKu39bR5iuaAUHhdppP5nYUTANVwAYSuXwfoaARk4aka" {
             return Err(ErrorCode::WorkerProgramOnly.into())
         }
 
+        msg!("Program successfully called!");
         Ok(())
     }
 }

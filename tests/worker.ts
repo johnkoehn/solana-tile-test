@@ -7,6 +7,7 @@ import { Workers, IDL } from '../target/types/workers';
 import fetchTokenAccount from './utils/fetchTokenAccount';
 import createMintInfo from './utils/createMintInfo';
 import { TileTest, IDL as IDL2 } from '../target/types/tile_test';
+import { setTimeout } from 'timers/promises';
 
 const testKeyString = require('./testKey.json');
 const testKey2String = require('./testKey2.json');
@@ -287,15 +288,9 @@ describe('Worker', () => {
             },
             signers: [testKey]
         });
-        // await program.rpc.assignTask({
-        //     accounts: {
-        //         workerAccount: workerInfo.workerAccount.publicKey,
-        //         workerTokenAccount: workerInfo.workerTokenAccount,
-        //         tileAccount: gameAccount.firstTileKey,
-        //         signer: testKey.publicKey
-        //     },
-        //     signers: [testKey]
-        // });
+
+        // wait three seconds to allow nodes to updates
+        await setTimeout(3000);
 
         const workerData = await program.account.workerAccount.fetch(workerInfo.workerAccount.publicKey);
         console.log(workerData);
@@ -319,9 +314,48 @@ describe('Worker', () => {
         });
     } catch (err) {
         errorMsg = err.msg;
-        console.log(err.msg);
+        console.log(err);
     }
 
     assert.ok(errorMsg === 'Worker has not completed the task')
+  });
+
+  it('should allow a worker to complete a task once enough time has passed', async () => {
+    const workerInfo = await mintWorker(programId, program, testKey);
+    const { gameAccount, tileAccount, seed, mint, mintBump, resourceTokenAccount } = await getFirstTileInfo(tileProgram, gameAccountPublicKey, testKey);
+
+    await program.rpc.assignTask({
+        accounts: {
+            workerAccount: workerInfo.workerAccount.publicKey,
+            workerTokenAccount: workerInfo.workerTokenAccount,
+            tileAccount: gameAccount.firstTileKey,
+            signer: testKey.publicKey
+        },
+        signers: [testKey]
+    });
+
+    // wait two minutes for the task to compelete 🤮
+    await setTimeout(120000);
+
+    const workerData = await program.account.workerAccount.fetch(workerInfo.workerAccount.publicKey);
+    console.log(workerData);
+    console.log(workerInfo.workerAccount.publicKey.toString());
+
+    await program.rpc.completeTask(mintBump, seed, {
+        accounts: {
+            workerProgramAccount: workerProgramAccountPublicKey,
+            workerAccount: workerInfo.workerAccount.publicKey,
+            workerTokenAccount: workerInfo.workerTokenAccount,
+            tileAccount: gameAccount.firstTileKey,
+            resourceMint: mint,
+            resourceTokenAccount: resourceTokenAccount,
+            signer: testKey.publicKey,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY
+        },
+        signers: [testKey]
+    });
   });
 });

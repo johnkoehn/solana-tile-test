@@ -6,6 +6,7 @@ use anchor_spl::{
 use borsh::{BorshDeserialize, BorshSerialize};
 use spl_token;
 use tile_test::program::*;
+// use tile_test::cpi::accounts::WorkerCompleteTask;
 
 declare_id!("DCCJ7jBybHT9Z9ZpDhXYKKS5S5LpQEBJeyiqwadCChdz");
 
@@ -83,18 +84,15 @@ pub mod workers {
         let tile_account = &ctx.accounts.tile_account;
 
         worker_checks(&worker, worker_token_account, signer)?;
-        msg!("worker: {:?}", worker.task);
 
         if worker.task.is_some() {
             return Err(ErrorCode::WorkerAlreadyHasTask.into());
         }
-        msg!("worker: {:?}", worker.key());
 
-        let task = Task {
+        worker.task = Some(Task {
             tile_public_key: tile_account.key(),
-            complete_time: Clock::get().unwrap().unix_timestamp + 120 // adds two minutes from now
-        };
-        worker.task = Some(task);
+            complete_time: Clock::get().unwrap().unix_timestamp + 10 // adds ten seconds minutes from now
+        });
 
         Ok(())
     }
@@ -108,8 +106,6 @@ pub mod workers {
 
         worker_checks(&worker, worker_token_account, signer)?;
 
-        msg!("worker: {:?}", worker.task);
-        msg!("worker: {:?}", worker.key());
         match worker.task.as_mut() {
             Some(_) => {},
             None => return Err(ErrorCode::NoWorkerTask.into())
@@ -117,38 +113,28 @@ pub mod workers {
 
         let task = worker.task.as_ref().unwrap();
         let current_time = Clock::get().unwrap().unix_timestamp;
-        if task.complete_time < current_time {
+        msg!("current time: {:?}", current_time);
+        msg!("worker task complete time: {:?}", task.complete_time);
+
+        // we still have time until the task completes
+        if task.complete_time > current_time {
             return Err(ErrorCode::WorkerHasNotCompletedTheTask.into());
         }
 
-        // mint the resource
 
+        // this is a failed program
+        // worker and tile-test should have been combined under a singular project called econ sim
+        // let cpi_accounts = tile_test::WorkerCompleteTask {
+        //     resource_mint: ctx.accounts.resource_mint,
+        //     resource_token_account: ctx.accounts.resource_token_account,
+        //     signer: ctx.accounts.worker_program_account,
+
+        // };
+        // mint the resource
+        // tile_test::cpi::worker_complete_task();
         Ok(())
     }
 }
-
-// pub worker_program_account: Account<'info, WorkerProgramAccount>,
-
-//     #[account(mut)]
-//     pub worker_account: Account<'info, WorkerAccount>,
-//     pub worker_token_account: Account<'info, TokenAccount>,
-//     pub tile_account: Account<'info, tile_test::TileAccount>,
-
-//     pub resource_mint: Account<'info, Mint>,
-//     #[account(
-//         init_if_needed,
-//         payer = signer,
-//         associated_token::mint = resource_mint,
-//         associated_token::authority = signer
-//     )]
-//     pub resource_token_account: Account<'info, TokenAccount>,
-
-//     pub signer: Signer<'info>,
-
-//     pub system_program: Program<'info, System>,
-//     pub associated_token_program: Program<'info, AssociatedToken>,
-//     pub token_program: Program<'info, Token>,
-//     pub rent: Sysvar<'info, Rent>
 
 #[derive(Accounts)]
 pub struct Init<'info> {
@@ -220,6 +206,7 @@ pub struct CompleteTask<'info> {
 
     #[account(mut)]
     pub worker_account: Account<'info, WorkerAccount>,
+
     pub worker_token_account: Account<'info, TokenAccount>,
     pub tile_account: Account<'info, tile_test::TileAccount>,
 
