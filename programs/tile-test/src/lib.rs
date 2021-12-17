@@ -173,8 +173,14 @@ pub mod tile_test {
         Ok(())
     }
 
-    // for now, just throw an error when the tile account does not exist
-    // pub fn add_worker()
+    pub fn worker_complete_task(ctx: Context<WorkerCompleteTask>, resource_mint_bump: u8, resource_mint_seed: String, amount: u64) -> ProgramResult {
+        if ctx.accounts.signer.key().to_string() != "AKu39bR5iuaAUHhdppP5nYUTANVwAYSuXwfoaARk4aka" {
+            return Err(ErrorCode::WorkerProgramOnly.into())
+        }
+
+        msg!("Program successfully called!");
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -302,6 +308,29 @@ pub struct GenerateResource<'info> {
     pub rent: Sysvar<'info, Rent>
 }
 
+#[derive(Accounts)]
+#[instruction(resource_mint_bump: u8, resource_mint_seed: String, amount: u64)]
+pub struct WorkerCompleteTask<'info> {
+    #[account(mut)]
+    pub resource_mint: Account<'info, Mint>,
+
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = resource_mint,
+        associated_token::authority = receiver
+    )]
+    pub resource_token_account: Account<'info, TokenAccount>,
+
+    pub signer: Signer<'info>,
+    pub receiver: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>
+}
+
 // Account not owned by the program
 // CpiAccount
 
@@ -340,9 +369,12 @@ pub enum ErrorCode {
     #[msg("Not the correct token account for the tile")]
     WrongTokenAccount,
 
-    #[msg("The account does not the NFT for the tile")]
+    #[msg("The account does not own the NFT for the tile")]
     NoNFT,
 
     #[msg("The game has minted the max number of tiles")]
-    MaxTiles
+    MaxTiles,
+
+    #[msg("Only the worker program can call this endpoint")]
+    WorkerProgramOnly
 }
